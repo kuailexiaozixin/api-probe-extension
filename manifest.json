@@ -1,0 +1,46 @@
+{
+  "manifest_version": 3,
+  "name": "API Probe",
+  "version": "1.8.0",
+  "description": "录制并探测网页中的 API 请求，自动分析端点、参数和响应格式",
+  "permissions": [
+    "storage",
+    "sidePanel",
+    "scripting"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "action": {
+    "default_title": "API Probe - 点击打开侧边栏"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "run_at": "document_start",
+      "js": [
+        "content.js"
+      ],
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "run_at": "document_start",
+      "js": [
+        "bridge.js"
+      ],
+      "world": "ISOLATED"
+    }
+  ]
+}

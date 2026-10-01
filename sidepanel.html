@@ -1,0 +1,1962 @@
+<!DOCTYPE html><html lang="zh-CN"><head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>API Probe</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+
+<style>
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+body {
+
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
+
+  font-size: 13px; color: #1f2937; background: #fff;
+
+  overflow: hidden; height: 100vh; display: flex; flex-direction: column;
+
+}
+
+@media (prefers-color-scheme: dark) {
+
+  body { background: #151922; color: #e5e7eb; }
+
+  .filter-bar { border-color: #2b3240; }
+
+  .method-btn { border-color: #374151; color: #9ca3af; }
+
+  .method-btn:hover { background: #1b202a; }
+
+  .method-btn.active { background: #2563eb; border-color: #2563eb; color: #fff; }
+
+  .search-input { background: #1b202a; border-color: #374151; color: #e5e7eb; }
+
+  .search-input::placeholder { color: #6b7280; }
+
+  .tab-item, .req-item { border-color: #2b3240; }
+
+  .tab-item:hover, .req-item:hover { background: #1b202a; }
+
+  .tab-item.active { background: #1b202a; }
+
+  .req-detail { background: #1b202a; }
+
+  .empty-state { color: #6b7280; }
+
+  .btn-record { background: #2563eb; }
+
+  .btn-record.recording { background: #dc2626; }
+
+  .btn-secondary { background: #374151; color: #e5e7eb; border-color: #4b5563; }
+
+  #ctxMenu { background: #1b202a; border-color: #374151; }
+
+  #ctxMenu .ctx-item:hover { background: #2563eb; }
+
+.ctx-sep, .ctx-sub-sep, .dd-sep { background: #374151; }
+
+  .ctx-submenu, .dd-menu { background: #1b202a; border-color: #374151; max-height:240px; overflow-y:auto; }
+
+  .ctx-sub-item:hover, .dd-item:hover { background: #2563eb; }
+
+  .ctx-sub-item, .dd-item { color: #e5e7eb; }
+  .filter-bar::-webkit-scrollbar-thumb { background: #374151; }
+  #tab-list::-webkit-scrollbar-thumb { background: #374151; }
+  #tab-list { border-color: #2b3240; }
+
+}
+
+.btn-record {
+
+  padding: 6px 14px; border: none; border-radius: 6px;
+
+  background: #2563eb; color: #fff; cursor: pointer;
+
+  font-size: 12px; font-weight: 500; transition: all 0.15s;
+
+}
+
+.btn-record:hover { opacity: 0.9; }
+
+.btn-record.recording { background: #dc2626; animation: pulse 1.5s ease-in-out infinite; }
+
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }
+
+.btn-secondary {
+
+  padding: 5px 10px; border: 1px solid #d1d5db; border-radius: 5px;
+
+  background: #fff; color: #374151; cursor: pointer; font-size: 11px;
+
+}
+
+.btn-secondary:hover { background: #f3f4f6; }
+
+#ctxMenu {
+
+  display: none; position: fixed; z-index: 999;
+
+  background: #fff; border: 1px solid #d1d5db; border-radius: 6px;
+
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+
+  min-width: 160px; padding: 4px 0;
+
+}
+
+#ctxMenu .ctx-item {
+
+  padding: 7px 14px; font-size: 12px; cursor: pointer;
+
+  display: flex; align-items: center; gap: 8px;
+
+}
+
+#ctxMenu .ctx-item:hover { background: #2563eb; color: #fff; }
+
+.filter-bar {
+  display: flex; gap: 6px; align-items: center;
+  padding: 6px 12px; border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0; flex-wrap: nowrap; overflow-x: auto;
+  scroll-behavior: smooth; white-space: nowrap;
+}
+
+/* 工作流变量面板 */
+#varsPanel {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 12px; background: #f8f9fa;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0; font-size: 11px;
+}
+#varsPanelLabel {
+  font-weight: 600; color: #6b7280; white-space: nowrap;
+}
+#varsList {
+  flex: 1; overflow: auto; max-height: 120px;
+  font-family: monospace; color: #1f2937;
+}
+
+.filter-bar::-webkit-scrollbar { height: 6px; }
+
+.filter-bar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 6px; }
+
+.filter-bar::-webkit-scrollbar-track { background: transparent; }
+
+.method-group { display: flex; gap: 2px; flex-shrink: 0; white-space: nowrap; }
+
+/* 工作流变量面板 HTML 将在下方添加 */
+
+.method-btn {
+
+  padding: 3px 8px; border: 1px solid #d1d5db; border-radius: 4px;
+
+  background: transparent; color: #6b7280; cursor: pointer;
+
+  font-size: 10px; font-family: monospace; font-weight: 600;
+
+  transition: all 0.12s;
+
+}
+
+.method-btn:hover { background: #f3f4f6; color: #374151; }
+
+.method-btn.active { background: #2563eb; border-color: #2563eb; color: #fff; }
+
+.search-input {
+
+  flex: 1; min-width: 80px;
+
+  padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px;
+
+  font-size: 11px; outline: none; background: #fff; color: #1f2937;
+
+}
+
+.search-input:focus { border-color: #2563eb; }
+
+.filter-count { font-size: 10px; color: #9ca3af; white-space: nowrap; }
+
+.toolbar {
+
+  display: flex; gap: 6px; align-items: center; padding: 4px 12px;
+
+  flex-shrink: 0; flex-wrap: wrap;
+
+}
+
+.toolbar .status { font-size: 12px; color: #6b7280; margin-left: auto; }
+
+#tab-list {
+
+  display: flex; gap: 4px; padding: 6px 12px;
+
+  overflow-x: auto; flex-shrink: 0; flex-wrap: nowrap;
+
+  scroll-behavior: smooth; white-space: nowrap;
+
+  border-bottom: 1px solid #e5e7eb;
+
+}
+
+#tab-list::-webkit-scrollbar { height: 6px; }
+
+#tab-list::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 6px; }
+
+#tab-list::-webkit-scrollbar-track { background: transparent; }
+
+.tab-item {
+
+  padding: 4px 10px; border: 1px solid #e5e7eb; border-radius: 12px;
+
+  font-size: 11px; cursor: pointer; white-space: nowrap;
+
+  min-width: fit-content; max-width: 200px; overflow: hidden; text-overflow: ellipsis;
+
+  flex-shrink: 0;
+
+  transition: background 0.1s;
+
+}
+
+.tab-item:hover { background: #f3f4f6; }
+
+.tab-item.active { background: #e0e7ff; border-color: #2563eb; color: #2563eb; }
+
+#req-list { flex: 1; overflow-y: auto; padding: 8px 12px; }
+
+.empty-state { text-align: center; padding: 40px 20px; color: #9ca3af; font-size: 13px; line-height: 1.6; }
+
+.empty-state .icon { font-size: 36px; margin-bottom: 12px; }
+
+.req-item { border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 6px; cursor: pointer; transition: background 0.1s; }
+
+.req-item.evt-item { border-left: 3px solid #8b5cf6; }
+
+.req-item:hover { background: #f9fafb; }
+
+.req-summary { display: flex; align-items: center; gap: 8px; padding: 8px 10px; font-size: 12px; }
+
+.req-method { display: inline-block; padding: 1px 6px; border-radius: 4px; font-weight: 600; font-size: 11px; font-family: monospace; min-width: 42px; text-align: center; }
+
+.method-GET { background: #dbeafe; color: #1d4ed8; }
+
+.method-POST { background: #dcfce7; color: #15803d; }
+
+.method-PUT { background: #fef3c7; color: #92400e; }
+
+.method-DELETE { background: #fee2e2; color: #b91c1c; }
+
+.method-PATCH { background: #f3e8ff; color: #7c3aed; }
+
+.method-SSE { background: #f3e8ff; color: #7c3aed; }
+
+.method-WS { background: #fef3c7; color: #d97706; }
+.method-GQL { background: #ecfdf5; color: #059669; }
+.method-SOCKETIO { background: #f3e8ff; color: #7c3aed; }
+.method-MQTT { background: #fef3c7; color: #d97706; }
+.method-EVT-PAGE { background: #dbeafe; color: #1d4ed8; }
+.method-EVT-CONSOLE { background: #fef3c7; color: #92400e; }
+.method-EVT-UI { background: #dcfce7; color: #15803d; }
+
+.req-status { font-family: monospace; font-size: 11px; font-weight: 600; min-width: 30px; text-align: center; }
+
+.status-2xx { color: #15803d; }
+
+.status-4xx { color: #b91c1c; }
+
+.status-5xx { color: #b91c1c; }
+
+.req-path { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: monospace; font-size: 11px; }
+
+.req-duration { font-size: 10px; color: #6b7280; white-space: nowrap; }
+
+.req-expand { font-size: 10px; color: #9ca3af; transition: transform 0.15s; }
+
+.req-item.expanded .req-expand { transform: rotate(90deg); }
+
+.req-detail { display: none; padding: 10px; border-top: 1px solid #e5e7eb; background: #f9fafb; font-size: 12px; line-height: 1.5; }
+
+.req-item.expanded .req-detail { display: block; }
+
+.detail-section { margin-bottom: 10px; }
+
+.detail-label { font-weight: 600; font-size: 11px; color: #6b7280; margin-bottom: 4px; text-transform: uppercase; }
+
+.detail-value { font-family: monospace; font-size: 11px; white-space: pre-wrap; word-break: break-all; background: #fff; border: 1px solid #e5e7eb; border-radius: 4px; padding: 6px 8px; max-height: 200px; overflow: auto; }
+
+
+
+/* ---- 重放模态框 ---- */
+
+/* ---- 重放增强样式 ---- */
+.form-row { display: flex; gap: 6px; margin-bottom: 10px; align-items: stretch; }
+
+.replay-url-input {
+
+  flex: 1; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 5px;
+
+  font-size: 12px; font-family: monospace; outline: none; background: #fff; color: #1f2937;
+
+}
+
+.replay-url-input:focus { border-color: #2563eb; }
+
+.replay-url-input.error { border-color: #dc2626; }
+
+.form-section { margin-bottom: 8px; }
+
+.form-hint { font-weight: 400; color: #9ca3af; }
+
+.replay-textarea {
+
+  width: 100%; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 5px;
+
+  font-size: 11px; font-family: monospace; outline: none; resize: vertical;
+
+  background: #fff; color: #1f2937; box-sizing: border-box;
+
+}
+
+.replay-textarea:focus { border-color: #2563eb; }
+
+.replay-textarea.error { border-color: #dc2626; }
+
+.form-error { font-size: 11px; color: #dc2626; min-height: 16px; margin-top: 2px; }
+
+.form-actions { display: flex; gap: 6px; margin: 10px 0; }
+
+.btn-send {
+
+  padding: 6px 16px; border: none; border-radius: 5px;
+
+  background: #2563eb; color: #fff; cursor: pointer;
+
+  font-size: 12px; font-weight: 500; transition: opacity 0.15s;
+
+}
+
+.btn-send:hover { opacity: 0.9; }
+
+.btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Response pane */
+
+.resp-status-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+
+.ctx-sep { height: 1px; background: #e5e7eb; margin: 4px 8px; }
+
+.ctx-has-sub { position: relative; justify-content: space-between; }
+
+.ctx-arrow { font-size: 10px; color: #9ca3af; }
+
+.ctx-submenu {
+
+  display: none; position: absolute; left: 100%; top: -4px;
+
+  background: #fff; border: 1px solid #d1d5db; border-radius: 6px;
+
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+
+  min-width: 180px; padding: 4px 0; z-index: 1001; white-space: nowrap;
+
+}
+
+.ctx-has-sub:hover .ctx-submenu { display: block; }
+
+.ctx-sub-item { padding: 6px 14px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: #1f2937; }
+
+.ctx-sub-item:hover { background: #2563eb; color: #fff; }
+
+.ctx-sub-sep { height: 1px; background: #e5e7eb; margin: 4px 8px; }
+
+.btn-dropdown { position: relative; display: inline-block; }
+
+.dd-menu { display: none; position: absolute; top: 100%; left: 0; background: #fff; border: 1px solid #d1d5db; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); min-width: 200px; padding: 4px 0; z-index: 100; margin-top: 4px; }
+
+.dd-menu.show { display: block; }
+
+.dd-item { padding: 6px 14px; font-size: 12px; cursor: pointer; color: #1f2937; }
+
+.dd-item:hover { background: #2563eb; color: #fff; }
+
+.dd-sep { height: 1px; background: #e5e7eb; margin: 4px 8px; }/* ---- Toast 提示 ---- */
+
+#toast {
+
+  visibility: hidden; min-width: 200px;
+
+  background: #1f2937; color: #fff;
+
+  text-align: center; border-radius: 6px;
+
+  padding: 8px 16px; position: fixed;
+
+  bottom: 24px; left: 50%; transform: translateX(-50%);
+
+  font-size: 12px; z-index: 2000;
+
+  opacity: 0; transition: opacity 0.3s, visibility 0.3s;
+
+}
+
+#toast.show { visibility: visible; opacity: 1; }
+
+@media (prefers-color-scheme: dark) {
+
+  #toast { background: #374151; color: #e5e7eb; }
+
+}
+
+
+
+/* ---- Query Params ---- */
+
+.params-toggle { cursor: pointer; user-select: none; display: flex; align-items: center; gap: 4px; }
+
+.params-toggle:hover { color: #2563eb; }
+
+.params-arrow { font-size: 10px; transition: transform 0.15s; display: inline-block; }
+
+.params-arrow.open { transform: rotate(90deg); }
+
+.params-header { display: flex; gap: 6px; padding: 4px 0; font-size: 10px; color: #9ca3af; font-weight: 600; text-transform: uppercase; }
+
+.param-row { display: flex; gap: 6px; margin-bottom: 4px; align-items: center; }
+
+.param-key, .param-val { flex: 1; padding: 4px 6px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 11px; font-family: monospace; outline: none; background: #fff; color: #1f2937; }
+
+.param-key:focus, .param-val:focus { border-color: #2563eb; }
+
+.param-del { width: 24px; height: 24px; border: none; background: transparent; cursor: pointer; font-size: 14px; color: #9ca3af; display: flex; align-items: center; justify-content: center; border-radius: 4px; flex-shrink: 0; }
+
+.param-del:hover { background: #fee2e2; color: #b91c1c; }
+
+.btn-add-param { padding: 3px 10px; border: 1px dashed #d1d5db; border-radius: 4px; background: transparent; color: #6b7280; cursor: pointer; font-size: 11px; margin-top: 4px; width: 100%; }
+
+.btn-add-param:hover { border-color: #2563eb; color: #2563eb; }
+
+@media (prefers-color-scheme: dark) {
+
+  .params-toggle:hover { color: #60a5fa; }
+
+  .param-key, .param-val { background: #1b202a; border-color: #374151; color: #e5e7eb; }
+
+  .param-key:focus, .param-val:focus { border-color: #3b82f6; }
+
+  .param-del:hover { background: #450a0a; color: #fca5a5; }
+
+  .btn-add-param { border-color: #374151; color: #9ca3af; }
+
+  .btn-add-param:hover { border-color: #60a5fa; color: #60a5fa; }
+
+}
+
+
+
+.hdr-mode-switch { display: inline-flex; border: 1px solid #d1d5db; border-radius: 4px; overflow: hidden; font-size: 10px; line-height: 1; }
+
+.hdr-mode-btn { padding: 2px 8px; cursor: pointer; color: #9ca3af; background: #fff; user-select: none; }
+
+.hdr-mode-btn.active { background: #2563eb; color: #fff; }
+
+.hdr-mode-btn:not(.active):hover { background: #f3f4f6; color: #374151; }
+
+@media (prefers-color-scheme: dark) {
+
+  .hdr-mode-switch { border-color: #374151; }
+
+  .hdr-mode-btn { background: #1b202a; color: #6b7280; }
+
+  .hdr-mode-btn.active { background: #2563eb; color: #fff; }
+
+  .hdr-mode-btn:not(.active):hover { background: #2b3240; color: #e5e7eb; }
+
+}
+
+
+
+
+
+/* ===== 列表详情 JSON 语法高亮 ===== */
+
+.detail-value .jsk { color: #0550ae; }
+
+.detail-value .jss { color: #0a3069; }
+
+.detail-value .jsn { color: #1a7f37; }
+
+.detail-value .jsb { color: #8250df; }
+
+.detail-value .jsnull { color: #6b7280; font-style: italic; }
+
+@media (prefers-color-scheme: dark) {
+
+  .detail-value .jsk { color: #79c0ff; }
+
+  .detail-value .jss { color: #a5d6ff; }
+
+  .detail-value .jsn { color: #7ee787; }
+
+  .detail-value .jsb { color: #d2a8ff; }
+
+  .detail-value .jsnull { color: #8b949e; }
+
+}
+
+
+
+
+
+/* ===== Builder Panel (Full-screen) ===== */
+
+#builderPanel {
+
+  display: none;
+
+  position: absolute;
+
+  top: 0; left: 0;
+
+  width: 100%; height: 100%;
+
+  z-index: 900;
+
+  background: #fff;
+
+  flex-direction: column;
+
+}
+
+#builderPanel.active { display: flex; }
+
+.builder-header {
+
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+
+  padding: 8px 12px; border-bottom: 1px solid #e5e7eb;
+
+  flex-shrink: 0; background: #f9fafb;
+
+}
+
+.builder-header h3 { font-size: 14px; font-weight: 600; flex: 1; min-width: 0; }
+
+.builder-close {
+
+  padding: 4px 10px; border: 1px solid #d1d5db; border-radius: 4px;
+
+  background: #fff; color: #374151; cursor: pointer; font-size: 11px;
+  flex-shrink: 0;
+
+}
+
+.builder-close:hover { background: #f3f4f6; }
+
+.builder-body {
+
+  flex: 1; overflow-y: auto; padding: 12px 16px;
+
+  display: flex; flex-direction: column; gap: 8px;
+
+}
+
+.builder-url-bar {
+
+  display: flex; gap: 6px; align-items: center; flex-shrink: 0;
+
+}
+
+.builder-url-bar select {
+
+  padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 5px;
+
+  font-size: 12px; font-family: monospace; font-weight: 600;
+
+  background: #fff; color: #1f2937; cursor: pointer; min-width: 80px; flex-shrink: 0;
+
+}
+
+.builder-url-bar input {
+
+  flex: 1; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 5px;
+
+  font-size: 12px; font-family: monospace; outline: none; background: #fff; color: #1f2937;
+
+}
+
+.builder-url-bar input:focus { border-color: #2563eb; }
+
+.builder-url-bar input.error { border-color: #dc2626; }
+
+.builder-section { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+
+.builder-section-label {
+
+  font-weight: 600; font-size: 11px; color: #6b7280;
+
+  margin-bottom: 4px; text-transform: uppercase;
+
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+
+}
+
+.builder-section textarea {
+
+  flex: 1; width: 100%; padding: 6px 8px; border: 1px solid #d1d5db;
+
+  border-radius: 5px; font-size: 11px; font-family: monospace;
+
+  outline: none; resize: none; background: #fff; color: #1f2937;
+
+  min-height: 80px;
+
+}
+
+.builder-section textarea:focus { border-color: #2563eb; }
+
+.builder-section textarea.error { border-color: #dc2626; }
+
+.builder-footer {
+
+  display: flex; gap: 6px; align-items: center; justify-content: space-between;
+
+  padding: 8px 16px; border-top: 1px solid #e5e7eb; flex-shrink: 0;
+
+}
+
+.builder-footer-left { display: flex; gap: 6px; }
+
+.builder-footer-right { display: flex; gap: 6px; }
+
+.form-error { font-size: 11px; color: #dc2626; min-height: 14px; margin-top: 2px; }
+
+
+
+/* Builder response (horizontal split) */
+
+.builder-response {
+
+  display: none; flex: 1; overflow-y: auto; padding: 12px 16px;
+
+  border-top: 1px solid #e5e7eb;
+
+}
+
+.builder-response.active { display: flex; flex-direction: column; }
+
+.builder-resp-status { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-shrink: 0; }
+
+
+
+@media (prefers-color-scheme: dark) {
+
+  #builderPanel { background: #151922; }
+
+  .builder-header { background: #1b202a; border-color: #2b3240; }
+
+  .builder-header h3 { color: #e5e7eb; }
+
+  .builder-close { background: #374151; color: #e5e7eb; border-color: #4b5563; }
+
+  .builder-close:hover { background: #2b3240; }
+
+  .builder-url-bar select { background: #1b202a; border-color: #374151; color: #e5e7eb; }
+
+  .builder-url-bar input { background: #1b202a; border-color: #374151; color: #e5e7eb; }
+
+  .builder-url-bar input:focus { border-color: #3b82f6; }
+
+  .builder-section textarea { background: #1b202a; border-color: #374151; color: #e5e7eb; }
+
+  .builder-section textarea:focus { border-color: #3b82f6; }
+
+  .builder-footer { border-color: #2b3240; }
+
+  .builder-response { border-color: #2b3240; }
+
+  #builderBodyType { background: #1b202a !important; border-color: #374151 !important; color: #e5e7eb !important; }
+
+  .builder-body #builderBodyType { background: #1b202a !important; border-color: #374151 !important; color: #e5e7eb !important; }
+
+  .builder-url-bar #builderMethod { background: #1b202a; border-color: #374151; color: #e5e7eb; }
+
+}
+
+
+
+
+
+/* ===== 环境变量指示器 ===== */
+
+.header-env { font-size:11px; cursor:pointer; padding:3px 8px; border-radius:4px; background:#f3f4f6; white-space:nowrap; }
+.header-env * { cursor:pointer; }
+#headerEnvName { cursor:pointer; }
+
+.header-env:hover { background:#e5e7eb; }
+
+@media (prefers-color-scheme: dark) {
+
+  .header-env { background:#374151; }
+
+  .header-env:hover { background:#2b3240; }
+
+}
+
+
+
+/* ===== 标题栏 ===== */
+
+.title-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 12px; border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+/* ===== 视图切换标签 ===== */
+
+.view-tab { padding:4px 10px; font-size:12px; cursor:pointer; color:#6b7280; border-bottom:2px solid transparent; transition:all 0.15s; }
+
+.view-tab:hover { color:#1f2937; }
+
+.view-tab.active { color:#2563eb; border-bottom-color:#2563eb; font-weight:500; }
+
+/* ===== 工具栏按钮（更大字体） ===== */
+
+.toolbar-btn { font-size: 12px !important; padding: 5px 12px !important; }
+
+@media (prefers-color-scheme: dark) {
+
+  .view-tab { color:#9ca3af; }
+
+  .view-tab:hover { color:#e5e7eb; }
+
+  .view-tab.active { color:#3b82f6; border-bottom-color:#3b82f6; }
+
+}
+
+
+
+/* ===== 视图面板 ===== */
+
+.view-panel { display:none; flex-direction:column; flex:1; overflow:hidden; }
+
+.view-panel.active { display:flex; }
+
+
+
+/* ===== 集合样式 ===== */
+
+.collection-group { margin:4px 8px; border:1px solid #e5e7eb; border-radius:6px; overflow:hidden; }
+
+.collection-header { display:flex; align-items:center; padding:8px 10px; cursor:pointer; font-size:12px; font-weight:500; }
+
+.collection-header:hover { background:#f9fafb; }
+
+.collection-arrow { margin-right:6px; font-size:10px; transition:transform 0.15s; color:#9ca3af; }
+
+.collection-arrow.open { transform:rotate(90deg); }
+
+.collection-name { flex:1; }
+
+.collection-del { cursor:pointer; padding:2px 4px; color:#9ca3af; font-size:11px; }
+
+.collection-del:hover { color:#dc2626; }
+
+.collection-items { display:none; }
+
+.collection-items.open { display:block; }
+
+.coll-req-item { display:flex; align-items:center; padding:7px 10px 7px 28px; cursor:pointer; font-size:12px; }
+
+.coll-req-item:hover { background:#f3f4f6; }
+
+.coll-req-item .method-badge { font-size:10px; font-weight:600; min-width:36px; }
+
+.coll-req-item .req-name { flex:1; margin:0 6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+.coll-req-del { cursor:pointer; padding:2px 4px; color:#9ca3af; font-size:11px; }
+
+.coll-req-del:hover { color:#dc2626; }
+
+@media (prefers-color-scheme: dark) {
+
+  .collection-group { border-color:#2b3240; }
+
+  .collection-header:hover { background:#1b202a; }
+
+  .coll-req-item:hover { background:#1b202a; }
+
+}
+
+
+
+/* ===== 保存到集合弹窗 ===== */
+
+#saveToCollModal { position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.3);z-index:9998;justify-content:center;align-items:center;display:none; }
+
+#saveToCollModal > div { background:#fff;border-radius:10px;width:90%;max-width:340px;max-height:70vh;display:flex;flex-direction:column;box-shadow:0 8px 24px rgba(0,0,0,0.2); }
+
+.save-coll-item { padding:8px 14px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:6px; }
+
+.save-coll-item:hover { background:#f3f4f6; }
+
+.save-coll-item .radio-circle { width:14px;height:14px;border-radius:50%;border:2px solid #d1d5db;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+
+.save-coll-item .radio-circle.selected { border-color:#2563eb; }
+
+.save-coll-item .radio-circle.selected::after { content:'';width:8px;height:8px;border-radius:50%;background:#2563eb; }
+
+@media (prefers-color-scheme: dark) {
+
+  #saveToCollModal > div { background:#151922; }
+
+  .save-coll-item:hover { background:#1b202a; }
+
+
+
+  #sseViewer { background: #151922 !important; }
+
+  #sseViewer .builder-header { background: #1b202a; border-color: #2b3240; }
+
+  #sseViewer #sseUrl { background: #1b202a; border-color: #374151; color: #e5e7eb; }
+
+  #sseViewer #sseUrl:focus { border-color: #3b82f6; }
+
+  #sseViewer #sseMessageLog { color: #e5e7eb; }}
+
+
+
+
+#sseViewer .sse-msg { padding:4px 8px; border-radius:4px; margin-bottom:2px; word-break:break-all; }
+
+#sseViewer .sse-msg .sse-time { color:#9ca3af; font-size:10px; margin-right:8px; }
+
+#sseViewer .sse-msg .sse-event { color:#6b7280; font-weight:500; font-size:10px; margin-right:6px; background:#f3f4f6; padding:1px 5px; border-radius:3px; }
+
+#sseViewer .sse-msg .sse-data { color:#1f2937; white-space:pre-wrap; }
+
+@media (prefers-color-scheme: dark) {
+
+  #sseViewer .sse-msg .sse-event { background:#374151; color:#9ca3af; }
+
+  #sseViewer .sse-msg .sse-data { color:#e5e7eb; }
+
+}
+
+
+
+
+
+/* ===== 协议标签 ===== */
+
+.proto-tag { font-size:9px; padding:1px 4px; border-radius:3px; margin-left:4px; font-weight:500; }
+
+.proto-https { background:#dbeafe; color:#2563eb; }
+
+.proto-http { background:#fef3c7; color:#d97706; }
+
+
+/* SSE/WS message view */
+.sse-view, .ws-view { max-height:250px; overflow-y:auto; background:#1a1a2e; border-radius:4px; padding:6px; font-size:11px; line-height:1.5; }
+.sse-msg, .ws-msg { padding:2px 4px; border-bottom:1px solid #2a2a3e; display:flex; gap:6px; }
+.sse-msg:last-child, .ws-msg:last-child { border-bottom:none; }
+.sse-event { color:#60a5fa; font-weight:600; white-space:nowrap; min-width:70px; }
+.sse-data { color:#e5e7eb; word-break:break-all; }
+.ws-send { color:#fbbf24; }
+.ws-receive { color:#4ade80; }
+.ws-event { color:#9ca3af; font-style:italic; }
+.ws-dir { min-width:20px; font-weight:bold; }
+.ws-data { word-break:break-all; }
+@media (prefers-color-scheme: dark) {
+
+  .proto-https { background:#1e3a5f; color:#60a5fa; }
+
+  .proto-http { background:#422006; color:#fbbf24; }
+
+}
+
+
+
+
+/* ===== WebSocket 消息样式 ===== */
+
+.ws-msg { padding:4px 8px; border-radius:4px; margin-bottom:2px; word-break:break-all; display:flex; align-items:flex-start; gap:6px; }
+
+.ws-msg .ws-time { color:#9ca3af; font-size:10px; flex-shrink:0; margin-top:1px; }
+
+.ws-msg .ws-dir { font-size:10px; font-weight:600; padding:1px 5px; border-radius:3px; flex-shrink:0; margin-top:1px; }
+
+.ws-msg .ws-dir.send { background:#dcfce7; color:#16a34a; }
+
+.ws-msg .ws-dir.receive { background:#dbeafe; color:#2563eb; }
+
+.ws-msg .ws-dir.system { background:#f3f4f6; color:#6b7280; }
+
+.ws-msg .ws-data { flex:1; white-space:pre-wrap; }
+
+.ws-msg .ws-data.send { color:#16a34a; }
+
+.ws-msg .ws-data.receive { color:#1f2937; }
+
+.ws-msg .ws-data.system { color:#6b7280; font-style:italic; }
+
+@media (prefers-color-scheme: dark) {
+
+  #wsViewer { background: #151922 !important; }
+
+  #wsViewer .builder-header { background: #1b202a; border-color: #2b3240; }
+
+  #wsViewer #wsUrl, #wsViewer #wsInput { background: #1b202a; border-color: #374151; color: #e5e7eb; }
+
+  #wsViewer #wsUrl:focus, #wsViewer #wsInput:focus { border-color: #3b82f6; }
+
+  .ws-msg .ws-dir.send { background:#064e3b; color:#4ade80; }
+
+  .ws-msg .ws-dir.receive { background:#1e3a5f; color:#60a5fa; }
+
+  .ws-msg .ws-dir.system { background:#374151; color:#9ca3af; }
+
+  .ws-msg .ws-data.receive { color:#e5e7eb; }
+
+  .ws-msg .ws-data.send { color:#4ade80; }
+
+}
+/* ===== Protocol Tabs ===== */
+.proto-tabs { display:flex;gap:2px;flex:1;min-width:0;overflow-x:auto;flex-wrap:nowrap }
+.proto-tabs::-webkit-scrollbar { height:6px }
+.proto-tabs::-webkit-scrollbar-thumb { background:#d1d5db;border-radius:6px }
+.proto-tab {
+  padding:3px 12px;font-size:11px;font-weight:500;border-radius:4px;
+  cursor:pointer;color:#6b7280;transition:all 0.15s;user-select:none;
+  border:1px solid transparent;flex-shrink:0;white-space:nowrap;
+}
+.proto-tab:hover { background:#e5e7eb;color:#374151; }
+.proto-tab.active { background:#2563eb;color:#fff;border-color:#2563eb; }
+
+/* GraphQL editor tabs */
+.gql-editor-tab { padding:4px 10px;font-size:10px;cursor:pointer;color:#6b7280;border-bottom:2px solid transparent;transition:all 0.12s;user-select:none; }
+.gql-editor-tab:hover { color:#374151; }
+.gql-editor-tab.active { color:#2563eb;border-bottom-color:#2563eb;font-weight:500; }
+.gql-resp-tab { padding:3px 10px;font-size:10px;cursor:pointer;color:#6b7280;border-bottom:2px solid transparent;transition:all 0.12s; }
+.gql-resp-tab:hover { color:#374151; }
+.gql-resp-tab.active { color:#2563eb;border-bottom-color:#2563eb; }
+/* Schema tree clickable fields */
+.gql-field { cursor:pointer;padding:1px 4px;border-radius:2px;transition:background 0.1s; }
+.gql-field:hover { background:#dbeafe;color:#1d4ed8; }
+.gql-type { cursor:pointer; }
+.gql-type:hover { text-decoration:underline; }
+@media (prefers-color-scheme: dark) {
+  .gql-editor-tab { color:#9ca3af; }
+  .gql-editor-tab:hover { color:#e5e7eb; }
+  .gql-editor-tab.active { color:#60a5fa;border-bottom-color:#60a5fa; }
+  .gql-resp-tab { color:#9ca3af; }
+  .gql-resp-tab:hover { color:#e5e7eb; }
+  .gql-resp-tab.active { color:#60a5fa;border-bottom-color:#60a5fa; }
+  .gql-resp-pane { background:#111827 !important;border-color:#374151 !important;color:#e5e7eb; }
+  #gqlRespErrors { background:#450a0a !important;border-color:#7f1d1d !important;color:#fca5a5; }
+  .gql-field:hover { background:#1e3a5f;color:#93c5fd; }
+}
+.proto-body { flex:1;display:flex;flex-direction:column;overflow-y:auto;gap:6px; }
+
+/* Connection log shared styles */
+.conn-log { flex:1;overflow-y:auto;font-family:monospace;font-size:11px;line-height:1.6;background:#f8f9fa;border:1px solid #e5e7eb;border-radius:4px;padding:4px;min-height:60px; }
+.conn-log .msg { padding:3px 6px;border-radius:3px;margin-bottom:2px;display:flex;gap:6px;align-items:flex-start;word-break:break-all; }
+.conn-log .msg:hover { background:rgba(0,0,0,0.02); }
+.conn-log .msg-time { color:#9ca3af;font-size:9px;flex-shrink:0;margin-top:1px; }
+.conn-log .msg-badge { font-size:9px;font-weight:600;padding:1px 5px;border-radius:3px;flex-shrink:0;margin-top:1px;white-space:nowrap; }
+.conn-log .msg-data { flex:1;white-space:pre-wrap; }
+.conn-log .msg-badge.evt { background:#dbeafe;color:#1d4ed8; }
+.conn-log .msg-badge.send { background:#dcfce7;color:#15803d; }
+.conn-log .msg-badge.recv { background:#dbeafe;color:#2563eb; }
+.conn-log .msg-badge.sys { background:#f3f4f6;color:#6b7280; }
+.conn-log .msg-badge.err { background:#fee2e2;color:#b91c1c; }
+.conn-log .msg-badge.info { background:#dbeafe;color:#2563eb; }
+@media (prefers-color-scheme: dark) {
+  .conn-log { background:#111827;border-color:#374151;color:#e5e7eb; }
+  .conn-log .msg:hover { background:rgba(255,255,255,0.03); }
+  .conn-log .msg-badge.evt { background:#1e3a5f;color:#93c5fd; }
+  .conn-log .msg-badge.send { background:#064e3b;color:#4ade80; }
+  .conn-log .msg-badge.recv { background:#1e3a5f;color:#60a5fa; }
+  .conn-log .msg-badge.sys { background:#374151;color:#9ca3af; }
+  .conn-log .msg-badge.err { background:#450a0a;color:#fca5a5; }
+  .conn-log .msg-badge.info { background:#1e3a5f;color:#93c5fd; }
+}
+.builder-footer .btn-send { background:#2563eb;color:#fff;border:none;border-radius:5px;cursor:pointer; }
+.builder-footer .btn-send:hover { background:#1d4ed8; }
+@media (prefers-color-scheme: dark) {
+  .proto-tab { color:#9ca3af; }
+  .proto-tab:hover { background:#374151;color:#e5e7eb; }
+  .proto-tab.active { background:#2563eb;color:#fff; }
+  .builder-footer { background:#1b202a;border-color:#2b3240; }
+}
+/* Response panel shared */
+.resp-panel { border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;background:#fff; }
+.resp-header { display:flex;align-items:center;gap:8px;padding:4px 8px;border-bottom:1px solid #e5e7eb;background:#f9fafb;font-size:11px;flex-shrink:0; }
+.resp-tabs { display:flex;border-bottom:1px solid #e5e7eb;flex-shrink:0; }
+.resp-tab { padding:3px 12px;font-size:10px;cursor:pointer;color:#6b7280;border-bottom:2px solid transparent; }
+.resp-tab.active { color:#2563eb;border-bottom-color:#2563eb; }
+.resp-pane { flex:1;overflow-y:auto;position:relative;min-height:0; }
+.resp-error { padding:8px;color:#b91c1c;font-size:11px;background:#fef2f2;border-top:1px solid #fecaca; }
+@media (prefers-color-scheme: dark) {
+  .resp-panel { background:#1b202a;border-color:#2b3240; }
+  .resp-header { background:#1b202a;border-color:#2b3240;color:#e5e7eb; }
+  .resp-tabs { border-color:#2b3240; }
+  .resp-tab { color:#9ca3af; }
+  .resp-tab.active { color:#93c5fd;border-bottom-color:#93c5fd; }
+  .resp-error { background:#450a0a;color:#fca5a5;border-color:#7f1d1d; }
+}
+
+/* ===== Code Editor Panel ===== */
+#codeEditorPanel {
+  display: none;
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 950;
+  background: #fff;
+  flex-direction: column;
+}
+#codeEditorPanel.active { display: flex; }
+.code-editor-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0; background: #f9fafb;
+}
+.code-editor-header h3 { font-size: 14px; font-weight: 600; flex: 1; }
+.code-editor-header .fmt-badge {
+  font-size: 10px; padding: 2px 8px; border-radius: 10px;
+  background: #dbeafe; color: #1d4ed8; font-weight: 500;
+}
+.code-editor-close {
+  padding: 4px 10px; border: 1px solid #d1d5db; border-radius: 4px;
+  background: #fff; color: #374151; cursor: pointer; font-size: 11px;
+}
+.code-editor-close:hover { background: #f3f4f6; }
+.code-editor-body {
+  flex: 1; display: flex; flex-direction: column;
+  padding: 0; overflow: hidden;
+}
+.code-editor-body textarea {
+  flex: 1; width: 100%; padding: 12px 14px;
+  font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+  font-size: 12px; line-height: 1.6;
+  border: none; outline: none; resize: none;
+  background: #1a1b26; color: #e5e7eb;
+  tab-size: 2; white-space: pre; overflow: auto;
+}
+.code-editor-footer {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; border-top: 1px solid #e5e7eb;
+  flex-shrink: 0; background: #f9fafb;
+}
+.code-editor-footer .status-text {
+  font-size: 11px; color: #6b7280; flex: 1;
+}
+.code-editor-btn {
+  padding: 5px 14px; border-radius: 5px; border: none;
+  font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;
+}
+.code-editor-btn.copy-btn {
+  background: #2563eb; color: #fff;
+}
+.code-editor-btn.copy-btn:hover { background: #1d4ed8; }
+.code-editor-btn.dl-btn {
+  background: #059669; color: #fff;
+}
+.code-editor-btn.dl-btn:hover { background: #047857; }
+.code-editor-btn.close-btn {
+  background: #f3f4f6; color: #374151; border: 1px solid #d1d5db;
+}
+.code-editor-btn.close-btn:hover { background: #e5e7eb; }
+@media (prefers-color-scheme: dark) {
+  #codeEditorPanel { background: #151922; }
+  .code-editor-header { background: #1b202a; border-color: #2b3240; }
+  .code-editor-header .fmt-badge { background: #1e3a5f; color: #93c5fd; }
+  .code-editor-close { background: #374151; color: #e5e7eb; border-color: #4b5563; }
+  .code-editor-close:hover { background: #4b5563; }
+  .code-editor-footer { background: #1b202a; border-color: #2b3240; }
+  .code-editor-footer .status-text { color: #9ca3af; }
+  .code-editor-btn.close-btn { background: #374151; color: #e5e7eb; border-color: #4b5563; }
+  .code-editor-btn.close-btn:hover { background: #4b5563; }
+}
+
+
+
+</style>
+
+</head>
+
+<body>
+
+<div id="ctxMenu">
+
+  <div class="ctx-item" id="ctxViewStack">🔍 查看调用链</div>
+
+  <div class="ctx-item" id="ctxSseView" style="display:none" data-sse-only="1">📡 打开 SSE 查看器</div>
+
+  <div class="ctx-item" id="ctxWsView" style="display:none" data-ws-only="1">🔌 打开 WebSocket 查看器</div>
+
+  <div class="ctx-item" id="ctxGqlConsole" style="display:none" data-gql-only="1">⚡ GraphQL Console</div>
+  <div class="ctx-item" id="ctxScripts">🔧 编辑脚本</div>
+  <div class="ctx-item" id="ctxReplay">▶ 重放请求</div>
+
+  <div class="ctx-item ctx-has-sub" id="ctxAddToCollection">
+
+    加入集合 <span class="ctx-arrow">▸</span>
+
+    <div class="ctx-submenu" id="ctxCollectionSubmenu">
+
+      <div class="ctx-sub-item" style="color:#9ca3af;cursor:default" id="ctxCollEmpty">(无集合，请先创建)</div>
+
+    </div>
+
+  </div>
+
+  <div class="ctx-sep"></div>
+
+  <div class="ctx-item ctx-has-sub" id="ctxExportCode">
+
+    导出代码 <span class="ctx-arrow">▸</span>
+
+    <div class="ctx-submenu" id="ctxSubmenu">
+
+      <div class="ctx-sub-item" data-format="markdown">📄 Markdown (.md)</div>
+
+      <div class="ctx-sub-sep"></div>
+
+      <div class="ctx-sub-item" data-format="curl">🔧 cURL</div>
+
+      <div class="ctx-sub-item" data-format="python">🐍 Python (requests)</div>
+      <div class="ctx-sub-item" data-format="python-httpx">🐍 Python (httpx)</div>
+
+      <div class="ctx-sub-item" data-format="js-fetch">📜 JavaScript (fetch)</div>
+
+      <div class="ctx-sub-item" data-format="js-axios">📜 JavaScript (axios)</div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<div class="title-bar">
+  <span class="view-tab active" data-view="record">录制</span>
+  <span class="view-tab" data-view="collections">集合</span>
+  <span class="view-tab" data-view="events">Events</span>
+  <span class="view-tab" id="btnNewRequest" style="cursor:pointer">新建请求</span>
+  <span class="header-env" id="headerEnv" title="点击管理环境变量" style="cursor:pointer">环境</span>
+</div>
+
+<div id="tab-list"></div>
+
+<div id="recordView" class="view-panel active">
+
+<div class="filter-bar">
+
+  <div class="method-group" id="methodGroup">
+
+    <button class="method-btn active" data-method="">ALL</button>
+
+    <button class="method-btn" data-method="GET">GET</button>
+
+    <button class="method-btn" data-method="POST">POST</button>
+
+    <button class="method-btn" data-method="PUT">PUT</button>
+
+    <button class="method-btn" data-method="DELETE">DEL</button>
+
+    <button class="method-btn" data-method="PATCH">PATCH</button>
+    <button class="method-btn" data-method="EVENTSOURCE">SSE</button>
+    <button class="method-btn" data-method="WEBSOCKET">WS</button>
+    <button class="method-btn" data-method="SOCKETIO">Socket.IO</button>
+    <button class="method-btn" data-method="MQTT">MQTT</button>
+    <button class="method-btn" data-method="GQL">GQL</button>
+
+  </div>
+
+  <input class="search-input" id="searchInput" type="text" placeholder="搜索 URL 关键词..." spellcheck="false">
+
+  <span class="filter-count" id="filterCount"></span>
+
+</div>
+
+<div class="toolbar">
+<button class="btn-record toolbar-btn" id="btnRecord">录制</button>
+
+  <span class="btn-dropdown" id="btnExportWrap">
+  <button class="btn-secondary toolbar-btn" id="btnExport">导出 ▾</button>
+  <div class="dd-menu" id="exportDropdown">
+    <div class="dd-item" data-format="markdown">📄 Markdown (.md)</div>
+    <div class="dd-sep"></div>
+    <div class="dd-item" data-format="curl">🔧 cURL</div>
+    <div class="dd-item" data-format="python">🐍 Python (requests)</div>
+    <div class="dd-item" data-format="python-httpx">🐍 Python (httpx)</div>
+    <div class="dd-item" data-format="js-fetch">📜 JavaScript (fetch)</div>
+    <div class="dd-item" data-format="js-axios">📜 JavaScript (axios)</div>
+  </div>
+  </span>
+
+  <button class="btn-secondary toolbar-btn" id="btnClear">清空</button>
+
+  <span class="status" id="statusText">就绪</span>
+
+</div>
+
+<div id="req-list">
+
+  <div class="empty-state">
+
+    <div class="icon">🔍</div>
+
+    <div>点击「录制」开始探测当前页面的 API</div>
+
+    <div style="font-size:12px;margin-top:8px;color:#d1d5db">页面刷新、点击、提交等操作触发的<br>fetch / XHR 请求将被自动捕获</div>
+
+  </div>
+
+</div>
+
+
+
+<div id="toast"></div>
+
+
+
+<!-- ===== Builder Panel (Full-screen) ===== -->
+
+
+
+</div><!-- ===== 环境变量管理弹窗 ===== -->
+
+<div id="envModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.3);z-index:9999;justify-content:center;align-items:center">
+
+  <div style="background:#fff;border-radius:10px;width:90%;max-width:380px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 8px 24px rgba(0,0,0,0.2)">
+
+    <div style="display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid #e5e7eb">
+
+      <span style="font-weight:600;font-size:14px;flex:1">环境变量管理</span>
+
+      <span id="envModalClose" style="cursor:pointer;color:#9ca3af;font-size:16px">✕</span>
+
+    </div>
+
+    <div style="padding:12px 16px;display:flex;gap:6px;flex-shrink:0">
+
+      <select id="envSelector" style="flex:1;padding:5px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:12px"></select>
+
+      <button class="btn-secondary" id="envAddBtn">+</button>
+
+      <button class="btn-secondary" id="envRenameBtn">✎</button>
+
+      <button class="btn-secondary" id="envDelBtn" style="color:#dc2626">✕</button>
+
+    </div>
+
+    <div id="envVarsList" style="flex:1;overflow-y:auto;padding:0 16px 12px;min-height:100px"></div>
+
+    <div style="padding:8px 16px;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end">
+
+      <button class="btn-send" id="envSaveBtn" style="font-size:11px;padding:5px 14px">✔ 保存</button>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+
+
+
+<!-- ===== 集合视图 ===== -->
+
+<div id="collectionsView" class="view-panel" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+
+  <div style="padding:10px 12px;display:flex;gap:6px;align-items:center;flex-shrink:0">
+
+    <button class="btn-secondary" id="btnNewCollection">+ 新建集合</button>
+
+  </div>
+
+  <div id="collectionList" class="req-list" style="flex:1;overflow-y:auto"></div>
+
+  <div id="collectionEmpty" class="empty-state" style="">
+
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5">
+
+      <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"></path>
+
+    </svg>
+
+    <p>暂无集合</p>
+
+    <p style="font-size:11px;color:#9ca3af;margin-top:4px">录制请求后，右键保存到集合</p>
+
+  </div>
+
+</div>
+
+<!-- ===== Events View ===== -->
+<div id="eventsView" class="view-panel" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+  <div style="padding:6px 12px;display:flex;gap:6px;align-items:center;flex-shrink:0;border-bottom:1px solid #e5e7eb">
+    <span style="font-size:11px;color:#6b7280">用户操作事件</span>
+    <span style="flex:1"></span>
+    <span id="evtCount" style="font-size:10px;color:#9ca3af"></span>
+    <button class="btn-secondary" id="btnClearEvents" style="font-size:10px;padding:3px 8px">清空</button>
+  </div>
+  <div id="evt-list" class="req-list" style="flex:1;overflow-y:auto;padding:8px 12px">
+    <div class="empty-state">
+      <div class="icon">🎯</div>
+      <div>等待事件录制...</div>
+      <div style="font-size:12px;margin-top:8px;color:#d1d5db">点击「录制」后，页面上的点击、输入、提交等 DOM 操作将被记录</div>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- ===== SSE 查看器 ===== -->
+
+
+
+<!-- ===== WebSocket 查看器 ===== -->
+
+<div id="wsViewer" style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;z-index:800;background:#fff;flex-direction:column">
+
+  <div class="builder-header">
+
+    <h3>WebSocket 查看器</h3>
+
+    <span style="font-size:11px;color:#6b7280;flex:1;margin-left:8px" id="wsStatus">未连接</span>
+
+    <button class="btn-secondary" id="wsConnectBtn" style="color:#22c55e;border-color:#22c55e">▶ 连接</button>
+
+    <button class="btn-secondary" id="wsDisconnectBtn" style="display:none;color:#ef4444;border-color:#ef4444">■ 断开</button>
+
+    <button class="btn-secondary" id="wsClearMsg">清空</button>
+
+    <button class="builder-close" id="wsClose">✕ 关闭</button>
+
+  </div>
+
+  <div style="padding:8px 12px;display:flex;gap:6px;align-items:center;flex-shrink:0;border-bottom:1px solid #e5e7eb">
+
+    <input type="text" id="wsUrl" class="replay-url-input" style="flex:1;font-size:11px" placeholder="https://..." spellcheck="false">
+
+  </div>
+
+  <div id="wsMessageLog" style="flex:1;overflow-y:auto;padding:8px 12px;font-family:monospace;font-size:11px;line-height:1.6"></div>
+
+  <div id="wsEmptyState" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#9ca3af;font-size:12px">
+
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5">
+
+      <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+
+      <path d="M9 12h6M12 9v6"></path>
+
+    </svg>
+
+    <p style="margin-top:8px">连接 WebSocket 服务器，收发消息</p>
+
+  </div>
+
+  <div style="display:flex;gap:6px;padding:8px 12px;border-top:1px solid #e5e7eb;flex-shrink:0">
+
+    <input type="text" id="wsInput" class="replay-url-input" style="flex:1;font-size:11px" placeholder="输入消息..." spellcheck="false">
+
+    <button class="btn-send" id="wsSendBtn" style="font-size:11px;padding:5px 14px" disabled="">发送</button>
+
+  </div>
+
+</div>
+
+
+
+<div id="sseViewer" style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;z-index:800;background:#fff;flex-direction:column">
+
+  <div class="builder-header">
+
+    <h3>SSE 查看器</h3>
+
+    <span style="font-size:11px;color:#6b7280;flex:1;margin-left:8px" id="sseStatus">未连接</span>
+
+    <button class="btn-secondary" id="sseConnectBtn" style="color:#22c55e;border-color:#22c55e">▶ 连接</button>
+
+    <button class="btn-secondary" id="sseDisconnectBtn" style="display:none;color:#ef4444;border-color:#ef4444">■ 断开</button>
+
+    <button class="btn-secondary" id="sseClearMsg">清空</button>
+
+    <button class="builder-close" id="sseClose">✕ 关闭</button>
+
+  </div>
+
+  <div style="padding:8px 12px;display:flex;gap:6px;align-items:center;flex-shrink:0;border-bottom:1px solid #e5e7eb">
+
+    <input type="text" id="sseUrl" class="replay-url-input" style="flex:1;font-size:11px" placeholder="https://..." spellcheck="false">
+
+  </div>
+
+  <div id="sseMessageLog" style="flex:1;overflow-y:auto;padding:8px 12px;font-family:monospace;font-size:11px;line-height:1.6"></div>
+
+  <div id="sseEmptyState" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#9ca3af;font-size:12px">
+
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5">
+
+      <path d="M22 2L11 13"></path>
+
+      <path d="M22 2L15 22l-4-9-9-4z"></path>
+
+    </svg>
+
+    <p style="margin-top:8px">点击「连接」开始接收 SSE 事件</p>
+
+  </div>
+
+</div>
+
+
+
+<div id="builderPanel">
+
+  <div class="builder-header">
+    <div class="proto-tabs" id="builderProtoTabs">
+      <span class="proto-tab active" data-proto="rest">REST</span>
+      <span class="proto-tab" data-proto="graphql">GraphQL</span>
+      <span class="proto-tab" data-proto="sse">SSE</span>
+      <span class="proto-tab" data-proto="ws">WebSocket</span>
+      <span class="proto-tab" data-proto="socketio">Socket.IO</span>
+      <span class="proto-tab" data-proto="mqtt">MQTT</span>
+    </div>
+    <button class="builder-close" id="builderClose">✕ 关闭</button>
+  </div>
+
+  <div class="builder-body" id="builderBody">
+
+    <!-- ==================== REST ==================== -->
+    <div class="proto-body" id="builderRestBody">
+
+    <div class="builder-url-bar">
+      <select id="builderMethod">
+        <option>GET</option>
+        <option selected="">POST</option>
+        <option>PUT</option>
+        <option>DELETE</option>
+        <option>PATCH</option>
+      </select>
+      <input type="text" id="builderUrl" class="replay-url-input" placeholder="https://api.example.com/path" spellcheck="false">
+    </div>
+
+    <div class="form-section" id="builderParamsSection">
+      <div class="detail-label params-toggle" id="builderParamsToggle">Query Params <span class="params-arrow">▸</span></div>
+      <div id="builderParamsTable" style="display:none">
+        <div class="params-header">
+          <span class="param-key-h">Key</span>
+          <span class="param-val-h">Value</span>
+          <span class="param-del-h"></span>
+        </div>
+        <div id="builderParamsRows"></div>
+        <button class="btn-add-param" id="builderAddParam">+ Add param</button>
+      </div>
+    </div>
+
+<div class="form-section" id="builderAuthSection">
+      <div class="detail-label params-toggle" id="builderAuthToggle">Auth <span class="params-arrow">▸</span></div>
+      <div id="builderAuthPanel" style="display:none;padding:6px 0">
+        <select id="builderAuthType" style="width:100%;padding:5px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:12px;margin-bottom:6px">
+          <option value="">No Auth</option>
+          <option value="bearer">Bearer Token</option>
+          <option value="oauth2">OAuth 2.0</option>
+          <option value="basic">Basic Auth</option>
+          <option value="digest">Digest Auth</option>
+          <option value="apikey">API Key (Header)</option>
+          <option value="apikey-query">API Key (Query Param)</option>
+        </select>
+        <div id="builderAuthFields">
+          <input type="text" id="builderAuthToken" placeholder="Token or credentials..." style="width: 100%; padding: 5px 8px; border: 1px solid rgb(209, 213, 219); border-radius: 4px; font-size: 12px; box-sizing: border-box; display: none;">
+        </div>
+        <div id="builderAuthKeyFields" style="display:none">
+          <input type="text" id="builderAuthKey" placeholder="Header name (e.g. X-API-Key)" style="width:100%;padding:5px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:12px;margin-top:4px;box-sizing:border-box">
+        </div>
+      </div>
+    </div>
+<div class="builder-section" id="builderHeadersSection" style="flex:1;min-height:0">
+
+      <div class="builder-section-label" style="display:flex;align-items:center;gap:8px">
+
+        <span>Headers</span>
+
+        <span class="hdr-mode-switch" id="builderHdrModeSwitch">
+
+          <span class="hdr-mode-btn active" data-mode="kv">KV</span>
+
+          <span class="hdr-mode-btn" data-mode="raw">Raw</span>
+
+        </span>
+
+      </div>
+
+      <div id="builderHdrKvEditor">
+
+        <div id="builderHdrRows"></div>
+
+        <button class="btn-add-param" id="builderAddHdr">+ Add header</button>
+
+      </div>
+
+      <textarea id="builderHeaders" class="replay-textarea" rows="4" spellcheck="false" style="display:none"></textarea>
+
+      <div class="form-error" id="builderHeadersError"></div>
+
+    </div>
+
+    <div class="builder-section" id="builderBodySection" style="flex:2;min-height:0">
+
+      <div class="builder-section-label" style="display:flex;align-items:center;gap:8px">
+
+        <span>Body</span>
+
+        <select id="builderBodyType" style="font-size:10px;padding:1px 4px;border:1px solid #d1d5db;border-radius:3px;background:#fff;color:#374151;outline:none">
+
+          <option value="json">JSON</option>
+          <option value="xml">XML</option>
+          <option value="text">Plain Text</option>
+          <option value="html">HTML</option>
+          <option value="yaml">YAML</option>
+          <option value="form">x-www-form-urlencoded</option>
+
+          <option value="multipart">form-data</option>
+
+        </select>
+
+        <span id="builderBodySize" style="font-size:9px;color:#9ca3af"></span>
+
+        <button class="btn-copy-small" id="builderBeautifyJson" style="display:none;padding:1px 6px;font-size:10px;border:1px solid #d1d5db;border-radius:3px;background:#f9fafb;cursor:pointer" title="格式化 JSON">美化</button>
+
+        <button class="btn-copy-small" id="builderCompressJson" style="display:none;padding:1px 6px;font-size:10px;border:1px solid #d1d5db;border-radius:3px;background:#f9fafb;cursor:pointer" title="压缩 JSON">压缩</button>
+
+      </div>
+
+      <div id="builderBodyKvEditor" style="display:none">
+
+        <div id="builderBodyKvRows"></div>
+
+        <button class="btn-add-param" id="builderAddBodyKv">+ Add param</button>
+
+      </div>
+
+      <textarea id="builderBody" class="replay-textarea" rows="6" spellcheck="false" placeholder='{
+  "key": "value"
+}' style="display:"></textarea>
+
+      <div class="form-error" id="builderBodyError"></div>
+
+    </div>
+
+    </div><!-- /builderRestBody -->
+
+    <!-- ==================== GraphQL ==================== -->
+    <div class="proto-body" id="builderGqlBody" style="display:none;flex:1;display:none;flex-direction:column">
+
+      <div class="builder-url-bar" style="flex-shrink:0">
+        <input type="text" id="builderGqlUrl" class="replay-url-input" placeholder="https://api.example.com/graphql" spellcheck="false" style="flex:1">
+      </div>
+
+      <div style="display:flex;flex:1;min-height:0;gap:0">
+
+        <!-- Schema Browser -->
+        <div id="builderGqlSchemaPanel" style="width:35%;overflow-y:auto;border:1px solid #e5e7eb;border-radius:4px;padding:6px;font-size:11px;background:#fafafa;flex-shrink:0;display:flex;flex-direction:column">
+          <div style="display:flex;gap:4px;margin-bottom:6px;flex-shrink:0">
+            <button id="builderGqlLoadSchema" style="padding:3px 8px;background:#2563eb;color:white;border:none;border-radius:4px;cursor:pointer;font-size:10px">加载 Schema</button>
+            <button id="builderGqlClearSchema" style="padding:3px 8px;background:#e5e7eb;border:1px solid #d1d5db;border-radius:4px;cursor:pointer;font-size:10px">清除</button>
+          </div>
+          <div id="builderGqlSchemaTree" style="flex:1;overflow-y:auto;font-family:monospace;font-size:10px;line-height:1.5;color:#6b7280">点击「加载 Schema」浏览类型定义</div>
+        </div>
+
+        <!-- Query + Variables + Response -->
+        <div style="flex:1;display:flex;flex-direction:column;min-width:0;gap:4px;padding-left:4px">
+
+          <!-- Tabs: Query / Variables / Headers -->
+          <div style="display:flex;gap:0;border-bottom:1px solid #e5e7eb;flex-shrink:0">
+            <span class="gql-editor-tab active" data-pane="query">Query</span>
+            <span class="gql-editor-tab" data-pane="variables">Variables</span>
+            <span class="gql-editor-tab" data-pane="headers">Headers</span>
+          </div>
+
+          <!-- Query pane -->
+          <div id="gqlPaneQuery" class="gql-editor-pane" style="flex:1;min-height:0;display:flex;flex-direction:column">
+            <div style="display:flex;gap:4px;flex-shrink:0;margin-bottom:2px">
+              <button id="builderGqlSnippet" style="padding:2px 6px;background:transparent;border:1px solid #d1d5db;border-radius:3px;cursor:pointer;font-size:9px;color:#6b7280" title="插入查询模板">📋 模板</button>
+              <span style="flex:1"></span>
+              <button id="builderGqlPretty" style="padding:2px 6px;background:transparent;border:1px solid #d1d5db;border-radius:3px;cursor:pointer;font-size:9px;color:#6b7280">美化</button>
+              <button id="builderGqlMinify" style="padding:2px 6px;background:transparent;border:1px solid #d1d5db;border-radius:3px;cursor:pointer;font-size:9px;color:#6b7280">压缩</button>
+            </div>
+            <textarea id="builderGqlQuery" class="replay-textarea" style="flex:1;min-height:100px;font-family:monospace;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;border-radius:4px;resize:none;tab-size:2" placeholder='query {
+  user(id: 1) {
+    name
+    email
+  }
+}'></textarea>
+          </div>
+
+          <!-- Variables pane -->
+          <div id="gqlPaneVariables" class="gql-editor-pane" style="flex:1;min-height:0;display:none;flex-direction:column">
+            <textarea id="builderGqlVariables" class="replay-textarea" style="flex:1;min-height:80px;font-family:monospace;font-size:11px;line-height:1.5;border:1px solid #e5e7eb;border-radius:4px;resize:none;tab-size:2;background:#fafafa" placeholder='{
+  "id": 1,
+  "name": "test"
+}'></textarea>
+          </div>
+
+          <!-- Headers pane -->
+          <div id="gqlPaneHeaders" class="gql-editor-pane" style="flex:1;min-height:0;display:none;flex-direction:column">
+            <div id="builderGqlHdrRows"></div>
+            <button class="btn-add-param" id="builderGqlAddHdr" style="margin-top:4px">+ Add header</button>
+          </div>
+
+          <!-- Execute bar -->
+          <div style="display:flex;gap:4px;flex-shrink:0;align-items:center">
+            <button id="builderGqlExecute" class="btn-send" style="font-size:11px;padding:4px 12px">▶ 执行</button>
+            <span id="builderGqlStatus" style="font-size:10px;color:#6b7280;margin-left:auto"></span>
+          </div>
+
+          <!-- Response tabs -->
+          <div style="display:flex;border-bottom:1px solid #e5e7eb;flex-shrink:0">
+            <span class="gql-resp-tab active" data-pane="body">Body</span>
+            <span class="gql-resp-tab" data-pane="headers">Headers</span>
+            <span class="gql-resp-tab" data-pane="errors">Errors</span>
+          </div>
+          <div id="gqlRespBody" class="gql-resp-pane" style="flex:1;overflow-y:auto;padding:6px;font-family:monospace;font-size:11px;background:#f8f9fa;border:1px solid #e5e7eb;border-radius:4px;white-space:pre-wrap;min-height:50px"></div>
+          <div id="gqlRespHeaders" class="gql-resp-pane" style="flex:1;overflow-y:auto;padding:6px;font-family:monospace;font-size:11px;background:#f8f9fa;border:1px solid #e5e7eb;border-radius:4px;white-space:pre-wrap;min-height:50px;display:none"></div>
+          <div id="gqlRespErrors" class="gql-resp-pane" style="flex:1;overflow-y:auto;padding:6px;font-family:monospace;font-size:11px;background:#fef2f2;border:1px solid #fecaca;border-radius:4px;white-space:pre-wrap;min-height:50px;display:none;color:#b91c1c"></div>
+
+        </div>
+
+      </div>
+    </div><!-- /builderGqlBody -->
+
+    <!-- ==================== SSE ==================== -->
+    <div class="proto-body" id="builderSseBody" style="display:none;flex:1;flex-direction:column">
+
+      <div class="builder-url-bar" style="flex-shrink:0">
+        <input type="text" id="builderSseUrl" class="replay-url-input" placeholder="https://api.example.com/events" spellcheck="false" style="flex:1">
+      </div>
+
+      <!-- Headers toggle -->
+      <div style="flex-shrink:0">
+        <div class="detail-label params-toggle" id="builderSseHdrToggle" style="font-size:10px">Headers <span class="params-arrow">▸</span></div>
+        <div id="builderSseHdrPanel" style="display:none;padding:4px 0">
+          <div id="builderSseHdrRows"></div>
+          <button class="btn-add-param" id="builderSseAddHdr" style="font-size:10px">+ Add header</button>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:4px;padding:4px 0;flex-shrink:0;align-items:center">
+        <button id="builderSseConnect" class="btn-send" style="font-size:11px;padding:4px 14px">▶ 连接</button>
+        <button id="builderSseDisconnect" style="display:none;padding:3px 10px;background:#dc2626;color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px">■ 断开</button>
+        <label style="font-size:10px;color:#6b7280;display:flex;align-items:center;gap:3px;cursor:pointer"><input type="checkbox" id="builderSseAutoScroll" checked style="width:12px;height:12px">自动滚动</label>
+        <span id="builderSseStatus" style="font-size:10px;color:#6b7280;margin-left:auto"></span>
+        <span id="builderSseCount" style="font-size:10px;color:#9ca3af;margin-left:4px"></span>
+        <button id="builderSseClear" style="padding:2px 6px;background:transparent;border:none;cursor:pointer;font-size:10px;color:#9ca3af">清空</button>
+      </div>
+
+      <div id="builderSseLog" class="conn-log"></div>
+
+    </div><!-- /builderSseBody -->
+
+    <!-- ==================== WebSocket ==================== -->
+    <div class="proto-body" id="builderWsBody" style="display:none;flex:1;flex-direction:column">
+
+      <div class="builder-url-bar" style="flex-shrink:0">
+        <input type="text" id="builderWsUrl" class="replay-url-input" placeholder="wss://api.example.com/socket" spellcheck="false" style="flex:1">
+      </div>
+
+      <!-- Headers toggle -->
+      <div style="flex-shrink:0">
+        <div class="detail-label params-toggle" id="builderWsHdrToggle" style="font-size:10px">Headers <span class="params-arrow">▸</span></div>
+        <div id="builderWsHdrPanel" style="display:none;padding:4px 0">
+          <div id="builderWsHdrRows"></div>
+          <button class="btn-add-param" id="builderWsAddHdr" style="font-size:10px">+ Add header</button>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:4px;padding:4px 0;flex-shrink:0;align-items:center">
+        <button id="builderWsConnect" class="btn-send" style="font-size:11px;padding:4px 14px">▶ 连接</button>
+        <button id="builderWsDisconnect" style="display:none;padding:3px 10px;background:#dc2626;color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px">■ 断开</button>
+        <label style="font-size:10px;color:#6b7280;display:flex;align-items:center;gap:3px;cursor:pointer"><input type="checkbox" id="builderWsAutoScroll" checked style="width:12px;height:12px">自动滚动</label>
+        <span id="builderWsStatus" style="font-size:10px;color:#6b7280;margin-left:auto"></span>
+        <span id="builderWsCount" style="font-size:10px;color:#9ca3af;margin-left:4px"></span>
+        <button id="builderWsClear" style="padding:2px 6px;background:transparent;border:none;cursor:pointer;font-size:10px;color:#9ca3af">清空</button>
+      </div>
+
+      <div id="builderWsLog" class="conn-log"></div>
+
+      <div style="display:flex;gap:4px;flex-shrink:0;padding-top:4px">
+        <input type="text" id="builderWsMessage" class="replay-url-input" placeholder="发送消息..." spellcheck="false" style="flex:1">
+        <button id="builderWsSend" class="btn-send" style="font-size:11px;padding:4px 14px">发送</button>
+      </div>
+
+    </div><!-- /builderWsBody -->
+
+<!-- ==================== Socket.IO ==================== -->
+    <div class="proto-body" id="builderSioBody" style="display:none;flex:1;flex-direction:column">
+
+      <div class="builder-url-bar" style="flex-shrink:0">
+        <input type="text" id="builderSioUrl" class="replay-url-input" placeholder="https://api.example.com" spellcheck="false" style="flex:1">
+        <input type="text" id="builderSioPath" class="replay-url-input" placeholder="/socket.io" spellcheck="false" style="width:120px">
+      </div>
+
+      <!-- Headers toggle -->
+      <div style="flex-shrink:0">
+        <div class="detail-label params-toggle" id="builderSioHdrToggle" style="font-size:10px">Headers <span class="params-arrow">▸</span></div>
+        <div id="builderSioHdrPanel" style="display:none;padding:4px 0">
+          <div id="builderSioHdrRows"></div>
+          <button class="btn-add-param" id="builderSioAddHdr" style="font-size:10px">+ Add header</button>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:4px;padding:4px 0;flex-shrink:0;align-items:center">
+        <button id="builderSioConnect" class="btn-send" style="font-size:11px;padding:4px 14px">▶ 连接</button>
+        <button id="builderSioDisconnect" style="display:none;padding:3px 10px;background:#dc2626;color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px">■ 断开</button>
+        <label style="font-size:10px;color:#6b7280;display:flex;align-items:center;gap:3px;cursor:pointer"><input type="checkbox" id="builderSioAutoScroll" checked style="width:12px;height:12px">自动滚动</label>
+        <span id="builderSioStatus" style="font-size:10px;color:#6b7280;margin-left:auto"></span>
+        <span id="builderSioCount" style="font-size:10px;color:#9ca3af;margin-left:4px"></span>
+        <button id="builderSioClear" style="padding:2px 6px;background:transparent;border:none;cursor:pointer;font-size:10px;color:#9ca3af">清空</button>
+      </div>
+
+      <div style="display:flex;gap:4px;flex-shrink:0">
+        <input type="text" id="builderSioEvent" class="replay-url-input" placeholder="事件名" spellcheck="false" style="width:140px">
+        <input type="text" id="builderSioData" class="replay-url-input" placeholder='{"msg": "hello"}' spellcheck="false" style="flex:1">
+        <button id="builderSioSend" class="btn-send" style="font-size:11px;padding:4px 14px">发送</button>
+      </div>
+
+      <div id="builderSioLog" class="conn-log"></div>
+
+    </div><!-- /builderSioBody -->
+
+    <!-- ==================== MQTT ==================== -->
+    <div class="proto-body" id="builderMqttBody" style="display:none;flex:1;flex-direction:column">
+
+      <div class="builder-url-bar" style="flex-shrink:0">
+        <input type="text" id="builderMqttUrl" class="replay-url-input" placeholder="wss://broker.emqx.io:8084/mqtt" spellcheck="false" style="flex:1">
+        <input type="text" id="builderMqttClientId" class="replay-url-input" placeholder="Client ID" spellcheck="false" style="width:150px">
+      </div>
+
+      <div style="display:flex;gap:6px;padding:4px 0;flex-shrink:0;align-items:center;flex-wrap:wrap">
+        <button id="builderMqttConnect" class="btn-send" style="font-size:11px;padding:4px 14px">▶ 连接</button>
+        <button id="builderMqttDisconnect" style="display:none;padding:3px 10px;background:#dc2626;color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px">■ 断开</button>
+        <label style="font-size:10px;color:#6b7280;display:flex;align-items:center;gap:3px;cursor:pointer"><input type="checkbox" id="builderMqttAutoScroll" checked style="width:12px;height:12px">自动滚动</label>
+        <span id="builderMqttStatus" style="font-size:10px;color:#6b7280;margin-left:auto"></span>
+        <span id="builderMqttCount" style="font-size:10px;color:#9ca3af;margin-left:4px"></span>
+        <button id="builderMqttClear" style="padding:2px 6px;background:transparent;border:none;cursor:pointer;font-size:10px;color:#9ca3af">清空</button>
+      </div>
+
+      <div style="display:flex;gap:4px;flex-shrink:0;align-items:center;flex-wrap:wrap">
+        <input type="text" id="builderMqttTopic" class="replay-url-input" placeholder="主题 (topic)" spellcheck="false" style="width:180px">
+        <select id="builderMqttQos" style="padding:4px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:10px;background:#fff;color:#374151">
+          <option value="0">QoS 0</option>
+          <option value="1" selected>QoS 1</option>
+          <option value="2">QoS 2</option>
+        </select>
+        <label style="font-size:10px;color:#6b7280;display:flex;align-items:center;gap:3px"><input type="checkbox" id="builderMqttRetain" style="width:12px;height:12px">Retain</label>
+        <button id="builderMqttSubscribe" class="btn-send" style="font-size:11px;padding:4px 10px">订阅</button>
+      </div>
+
+      <div style="display:flex;gap:4px;flex-shrink:0;padding-top:4px">
+        <input type="text" id="builderMqttMessage" class="replay-url-input" placeholder="消息内容" spellcheck="false" style="flex:1">
+        <button id="builderMqttPublish" class="btn-send" style="font-size:11px;padding:4px 10px">发布</button>
+      </div>
+
+      <div id="builderMqttLog" class="conn-log"></div>
+
+    </div><!-- /builderMqttBody -->
+
+    <!-- ===== Shared Response Section ===== -->
+    <div id="builderResponse" class="resp-panel" style="display:none;flex-direction:column;flex-shrink:0;max-height:60%">
+
+      <div class="resp-header">
+
+        <span class="resp-badge" id="builderStatusBadge"></span>
+
+        <span id="builderDuration"></span>
+
+        <span style="flex:1"></span>
+
+        <button id="builderCopyCurl" class="btn-copy-small" style="padding:2px 8px;font-size:10px">保存为 cURL</button>
+
+        <button id="builderExportResp" class="btn-copy-small" style="padding:2px 8px;font-size:10px">导出</button>
+
+        <button id="builderRespClose" class="builder-close" style="padding:1px 6px;font-size:10px">✕</button>
+
+      </div>
+
+      <div class="resp-tabs" id="builderRespTabs">
+
+        <span class="resp-tab active" data-pane="body">Body</span>
+
+        <span class="resp-tab" data-pane="headers">Headers</span>
+
+      </div>
+
+      <div id="builderRespBodyPane" class="resp-pane active" style="flex:1;overflow-y:auto;position:relative">
+
+        <div id="builderRespBody" style="white-space:pre-wrap;font-family:monospace;font-size:11px;line-height:1.5;padding:6px 8px;min-height:40px"></div>
+
+      </div>
+
+      <div id="builderRespHeadersPane" class="resp-pane" style="flex:1;overflow-y:auto;display:none">
+
+        <div id="builderRespHeaders" style="white-space:pre-wrap;font-family:monospace;font-size:11px;line-height:1.5;padding:6px 8px;min-height:40px"></div>
+
+      </div>
+
+      <div class="resp-error" id="builderRespError" style="display:none"></div>
+
+    </div>
+
+  </div><!-- /builder-body -->
+
+  <div class="builder-footer" style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-top:1px solid #e5e7eb;flex-shrink:0;background:#f9fafb">
+
+    <button id="builderSend" class="btn-send" style="font-size:12px;padding:5px 18px">▶ 发送请求</button>
+
+    <span id="builderFooterHint" style="font-size:10px;color:#9ca3af;flex:1">REST API 请求</span>
+
+    <div id="builderExportWrap" style="position:relative">
+      <button id="builderExportBtn" class="btn-copy-small" style="padding:3px 10px;font-size:10px">导出 ▾</button>
+      <div id="builderExportDropdown" class="ctx-submenu" style="display:none;bottom:100%;top:auto;margin-bottom:2px">
+        <div class="dd-item" data-format="markdown">Markdown (.md)</div>
+        <div class="dd-item" data-format="curl">cURL</div>
+        <div class="dd-item" data-format="python">Python (requests)</div>
+        <div class="dd-item" data-format="python-httpx">Python (httpx)</div>
+        <div class="dd-item" data-format="js-fetch">JavaScript (fetch)</div>
+        <div class="dd-item" data-format="js-axios">JavaScript (axios)</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="gqlConsoleOverlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:99999;flex-direction:column">
+  <div style="background:#fff;width:100%;height:100%;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;padding:8px 12px;border-bottom:1px solid #e5e7eb;flex-shrink:0;background:#fff">
+      <span style="font-weight:600;font-size:14px;flex:1">⚡ GraphQL Console</span>
+      <span style="font-size:11px;color:#6b7280;margin-right:12px" id="gqlEndpoint"></span>
+      <span id="gqlConsoleClose" style="cursor:pointer;padding:2px 8px;border-radius:4px;color:#6b7280;font-size:16px">✕</span>
+    </div>
+    <div style="display:flex;flex:1;overflow:hidden">
+      <!-- Schema Browser (左侧) -->
+      <div style="width:35%;overflow-y:auto;border-right:1px solid #e5e7eb;padding:8px;font-size:12px;background:#fafafa" id="gqlSchemaPanel">
+        <div style="display:flex;gap:4px;margin-bottom:8px">
+          <button id="gqlLoadSchemaBtn" style="padding:4px 10px;background:#2563eb;color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px">加载 Schema</button>
+        </div>
+        <div id="gqlSchemaTree" style="font-family:monospace;font-size:11px;line-height:1.6">点击「加载 Schema」浏览类型定义</div>
+      </div>
+      <!-- 右侧：Query + Response -->
+      <div style="flex:1;display:flex;flex-direction:column">
+        <textarea id="gqlQueryEditor" style="flex:1;font-family:monospace;font-size:13px;padding:10px;border:none;resize:none;outline:none;line-height:1.5;background:#f8f9fa" placeholder="输入 GraphQL query...
+
+例如:
+query {
+  user(id: 1) {
+    name
+    email
+  }
+}"></textarea>
+        <div style="display:flex;gap:6px;padding:6px 10px;border-top:1px solid #e5e7eb;align-items:center;flex-shrink:0;background:#fff">
+          <button id="gqlExecuteBtn" style="padding:5px 16px;background:#2563eb;color:white;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600">▶ 执行</button>
+          <button id="gqlPrettyBtn" style="padding:5px 10px;background:#e5e7eb;border:1px solid #d1d5db;border-radius:5px;cursor:pointer;font-size:11px">美化</button>
+          <button id="gqlClearBtn" style="padding:5px 10px;background:#e5e7eb;border:1px solid #d1d5db;border-radius:5px;cursor:pointer;font-size:11px">清空</button>
+          <span id="gqlStatus" style="font-size:11px;color:#6b7280;margin-left:auto"></span>
+        </div>
+        <div id="gqlResponse" style="flex:1;overflow-y:auto;padding:10px;font-family:monospace;font-size:12px;background:#f8f9fa;border-top:1px solid #e5e7eb;white-space:pre-wrap;line-height:1.5;color:#1f2937"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<style>
+/* GQL Console dark mode */
+@media (prefers-color-scheme: dark) {
+  #gqlConsoleOverlay > div { background: #1f2937 !important; }
+  #gqlConsoleOverlay > div > div:first-child { background: #1f2937 !important; border-color: #374151 !important; }
+  #gqlConsoleOverlay > div > div:first-child span { color: #e5e7eb !important; }
+  #gqlSchemaPanel { background: #111827 !important; border-color: #374151 !important; }
+  #gqlSchemaTree { color: #d1d5db !important; }
+  #gqlQueryEditor { background: #1a1a2e !important; color: #e5e7eb !important; }
+  #gqlResponse { background: #111827 !important; color: #d1d5db !important; border-color: #374151 !important; }
+  #gqlConsoleOverlay .detail-panel > div { border-color: #374151 !important; }
+}
+</style>
+
+<!-- Script Editor Overlay -->
+
+<div id="scriptEditorOverlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:99998;flex-direction:column">
+  <div style="background:#fff;width:100%;height:100%;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;padding:8px 12px;border-bottom:1px solid #e5e7eb;flex-shrink:0">
+      <span style="font-weight:600;font-size:14px;flex:1">Scripts</span>
+      <span id="scriptEndpoint" style="font-size:11px;color:#6b7280;margin-right:12px"></span>
+      <span id="scriptEditorClose" style="cursor:pointer;padding:2px 8px;color:#6b7280;font-size:16px">x</span>
+    </div>
+    <div style="display:flex;border-bottom:1px solid #e5e7eb;flex-shrink:0">
+      <div class="script-tab active" data-tab="pre" style="padding:8px 16px;cursor:pointer;border-bottom:2px solid #2563eb;font-size:13px;font-weight:500;color:#2563eb">Pre-request</div>
+      <div class="script-tab" data-tab="post" style="padding:8px 16px;cursor:pointer;border-bottom:2px solid transparent;font-size:13px;color:#6b7280">Post-response</div>
+    </div>
+    <div style="flex:1;display:flex">
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+        <textarea id="scriptEditor" style="flex:1;font-family:monospace;font-size:13px;padding:10px;border:none;resize:none;outline:none;line-height:1.5;background:#1a1b26;color:#e5e7eb" placeholder="// JavaScript code
+// pm.variables.set('token', response.token)
+// pm.variables.get('token')
+// pm.test('status is 200', response.status === 200)"></textarea>
+        <div style="display:flex;gap:6px;padding:6px 10px;border-top:1px solid #e5e7eb;align-items:center;flex-shrink:0">
+          <button id="scriptSaveBtn" style="padding:5px 16px;background:#2563eb;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px">Save</button>
+          <button id="scriptRunBtn" style="padding:5px 10px;background:#059669;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:11px">Run Test</button>
+          <span id="scriptStatus" style="font-size:11px;color:#6b7280;margin-left:auto"></span>
+        </div>
+        <div id="scriptOutput" style="max-height:150px;overflow-y:auto;padding:8px 10px;font-family:monospace;font-size:11px;background:#111827;color:#e5e7eb;border-top:1px solid #e5e7eb;display:none;white-space:pre-wrap"></div>
+      </div>
+      <div style="width:150px;border-left:1px solid #e5e7eb;padding:6px 8px;font-size:11px;overflow-y:auto;background:#fafafa;flex-shrink:0;display:flex;flex-direction:column" id="scriptVarsPanel">
+        <div style="font-weight:600;margin-bottom:6px;font-size:12px">Variables</div>
+        <div id="scriptVarsList" style="color:#6b7280;font-size:10px;overflow-y:auto;flex:1">No variables set</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="saveToCollModal"><div><div style="display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid #e5e7eb"><span style="font-weight:600;font-size:14px;flex:1">保存到集合</span><span id="saveCollClose" style="cursor:pointer;color:#9ca3af;font-size:16px">✕</span></div><div id="saveCollList" style="flex:1;overflow-y:auto;padding:8px 0"></div><div style="padding:8px 16px;border-top:1px solid #e5e7eb;display:flex;gap:6px;justify-content:flex-end"><button class="btn-secondary" id="saveCollNewBtn">+ 新建集合</button><button class="btn-send" id="saveCollConfirmBtn" style="font-size:11px;padding:5px 14px">✔ 保存</button></div></div></div>
+
+
+
+<!-- ===== Code Editor Panel ===== -->
+<div id="codeEditorPanel">
+  <div class="code-editor-header">
+    <h3>代码编辑器</h3>
+    <span class="fmt-badge" id="ceFmtBadge">Markdown</span>
+    <button class="code-editor-close" id="ceClose">✕ 关闭</button>
+  </div>
+  <div class="code-editor-body">
+    <textarea id="ceTextarea" spellcheck="false" wrap="off"></textarea>
+  </div>
+  <div class="code-editor-footer">
+    <span class="status-text" id="ceStatus">就绪</span>
+    <button class="code-editor-btn copy-btn" id="ceCopy">📋 复制代码</button>
+    <button class="code-editor-btn dl-btn" id="ceDownload">⬇ 下载文件</button>
+    <button class="code-editor-btn close-btn" id="ceCloseBtn">关闭</button>
+  </div>
+</div>
+<!-- 工作流变量显示面板 -->
+<div id="varsPanel">
+  <span id="varsPanelLabel">🔄 变量:</span>
+  <div id="varsList">无变量</div>
+</div>
+
+</body>
+<script src="sidepanel.js"></script>
+<!-- ===== GraphQL Console Overlay --></html>
