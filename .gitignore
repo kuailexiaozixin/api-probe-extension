@@ -1,0 +1,20 @@
+# 编辑器 / 系统
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+*.code-workspace
+
+# Node / 构建（本扩展纯静态无构建步骤，保留以备将来使用）
+node_modules/
+dist/
+build/
+*.log
+npm-debug.log*
+
+# 压缩包（用户自行打包的发布产物）
+*.zip
+*.crx
+*.pem
